@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import configparser
 import json
+import platform
 import re
 from pathlib import Path
 
@@ -36,6 +37,15 @@ def configurations(directory: Path) -> dict[str, str]:
         for path in directory.rglob("*")
         if path.is_file() and path.suffix in {".repo", ".list", ".sources"}
     }
+
+
+def deb822_fields(path: Path) -> dict[str, str]:
+    """Read the single-stanza DEB822 files managed by the role."""
+    return dict(
+        line.split(": ", 1)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if ": " in line
+    )
 
 
 def repository(path: Path, section: str) -> configparser.SectionProxy:
@@ -86,11 +96,7 @@ def verify_definition(directory: Path, backend: str, phase: str) -> Path:
         return path
     expected_url = f"file:///tmp/repos-fixture-{'v1' if phase == 'initial' else 'v2'}"
     if backend == "apt":
-        fields = dict(
-            line.split(": ", 1)
-            for line in path.read_text().splitlines()
-            if ": " in line
-        )
+        fields = deb822_fields(path)
         assert fields["URIs"] == expected_url, fields
         assert fields["Enabled"] == "no", fields
         assert fields["Suites"] == "./", fields
@@ -104,10 +110,43 @@ def verify_definition(directory: Path, backend: str, phase: str) -> Path:
     return path
 
 
+def verify_backports(directory: Path, distribution: str, phase: str) -> Path:
+    """Check the selected suite, archive trust and enabled state against the host."""
+    name = distribution.lower()
+    path = directory / "sources.list.d" / f"{name}-backports.sources"
+    fields = deb822_fields(path)
+    codename = platform.freedesktop_os_release()["VERSION_CODENAME"]
+    assert fields["Suites"] == f"{codename}-backports", fields
+    assert fields["Types"] == "deb", fields
+    assert fields["Enabled"] == ("yes" if phase == "initial" else "no"), fields
+    assert fields["Signed-By"] == f"/usr/share/keyrings/{name}-archive-keyring.gpg", (
+        fields
+    )
+    if distribution == "Debian":
+        assert fields["URIs"] == "https://deb.debian.org/debian", fields
+        assert fields["Components"] == "main", fields
+    else:
+        archive = (
+            "https://archive.ubuntu.com/ubuntu"
+            if platform.machine() in {"x86_64", "i386", "i686"}
+            else "https://ports.ubuntu.com/ubuntu-ports"
+        )
+        assert fields["URIs"] == archive, fields
+        assert set(fields["Components"].split()) == {
+            "main",
+            "restricted",
+            "universe",
+            "multiverse",
+        }, fields
+    return path
+
+
 def verify_presets(
     directory: Path, distribution: str, phase: str, version: str
 ) -> set[Path]:
     """Check every selected distribution preset, including its disabled state."""
+    if distribution in {"Debian", "Ubuntu"}:
+        return {verify_backports(directory, distribution, phase)}
     paths = set()
     for name in PRESETS.get(distribution, []):
         path = directory / f"{name}.repo"

@@ -6,6 +6,23 @@
   hosts: all
   gather_facts: true
   tasks:
+    - name: REPOS | Validate Backports metadata and signatures with APT
+      become: true
+      become_user: root
+      ansible.builtin.command:
+        argv:
+          - apt-get
+          - update
+          - --error-on=any
+          - -o
+          - "Dir::Etc::sourcelist=/etc/apt/sources.list.d/{{ ansible_facts.distribution | lower }}-backports.sources"
+          - -o
+          - Dir::Etc::sourceparts=-
+          - -o
+          - APT::Get::List-Cleanup=0
+      changed_when: false
+      when: ansible_facts.pkg_mgr == 'apt'
+
     - name: REPOS | Verify definitions, selected presets and preserved supplied settings
       ansible.builtin.script:
         cmd: >-

@@ -190,6 +190,9 @@ argument_specs:
         type: dict
         default: {}
         options:
+          backports:
+            type: bool
+            description: Define the detected release's Backports source on Debian or Ubuntu.
           epel:
             type: bool
             description: Define EPEL on AlmaLinux; CRB is selected separately.

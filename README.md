@@ -210,7 +210,16 @@ No service or handler is managed.
   empty lists.
 - repos_presets accepts epel and crb on AlmaLinux; rpmfusion_free,
   rpmfusion_nonfree and updates_testing on Fedora; obs_devel_tools and
-  obs_filesystems on openSUSE. Debian and Ubuntu have no predefined switches.
+  obs_filesystems on openSUSE. Debian and Ubuntu support backports for the
+  detected release codename.
+- The backports preset manages debian-backports.sources with the main component,
+  or ubuntu-backports.sources with main, restricted, universe and multiverse. It
+  uses HTTPS and the installed distribution archive keyring; Ubuntu uses the
+  ports archive on non-x86 architectures.
+- Backports definitions in other source files remain unchanged, including
+  Ubuntu's supplied ubuntu.sources. Avoid defining the same source twice;
+  setting backports to false disables only the preset-managed file, not a
+  Backports suite in another file.
 - Omitted presets are unmanaged. Explicit true or false creates a complete
   preset definition with that enabled flag, except crb and updates_testing,
   which only toggle supplied sections. EPEL and RPM Fusion presets own their
@@ -257,6 +266,20 @@ Use an existing public keyring scoped to one DEB822 source.
           suites: [stable]
           components: [main]
           signed_by: /etc/apt/keyrings/organization.asc
+```
+
+### Select Debian or Ubuntu Backports
+
+Enable the Backports suite matching the managed host's release codename.
+
+```yaml
+- name: Configure Backports
+  hosts: debian:ubuntu
+  gather_facts: true
+  roles:
+    - role: jomrr.repos
+      repos_presets:
+        backports: true
 ```
 
 ### Toggle supplied Fedora repositories
@@ -310,6 +333,8 @@ Enable devel:tools for the detected openSUSE release.
 ## References
 
 - [DEB822 module](https://docs.ansible.com/projects/ansible/latest/collections/ansible/builtin/deb822_repository_module.html)
+- [Debian Backports](https://backports.debian.org/Instructions/)
+- [Ubuntu archive pockets](https://documentation.ubuntu.com/project/how-ubuntu-is-made/concepts/package-archive/)
 - [AlmaLinux repositories](https://wiki.almalinux.org/repos/Extras)
 - [RPM Fusion definitions](https://github.com/rpmfusion/rpmfusion-free-release)
 - [OBS devel:tools](https://build.opensuse.org/repositories/devel%3Atools)

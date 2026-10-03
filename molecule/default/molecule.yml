@@ -33,8 +33,10 @@ provisioner:
           AlmaLinux:
             epel: true
             crb: false
-          Debian: {}
-          Ubuntu: {}
+          Debian:
+            backports: true
+          Ubuntu:
+            backports: true
           Fedora:
             rpmfusion_free: true
             rpmfusion_nonfree: true

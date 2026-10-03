@@ -45,6 +45,7 @@ repos_toggles: []
 
 # Distribution-specific switches; omitted presets leave their repositories unmanaged.
 repos_presets: {}
+# Debian and Ubuntu: backports.
 # AlmaLinux: epel, crb; Fedora: rpmfusion_free, rpmfusion_nonfree, updates_testing.
 # openSUSE Leap and Tumbleweed: obs_devel_tools, obs_filesystems.
 # repos_presets:
