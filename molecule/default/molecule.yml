@@ -1,0 +1,104 @@
+---
+# role: repos
+# file: molecule/default/molecule.yml
+
+dependency:
+  name: "galaxy"
+  options:
+    role-file: "${MOLECULE_PROJECT_DIRECTORY}/collections.yml"
+    requirements-file: "${MOLECULE_PROJECT_DIRECTORY}/collections.yml"
+driver:
+  name: "podman"
+provisioner:
+  name: "ansible"
+  config_options:
+    defaults:
+      forks: 8
+      interpreter_python: "auto_silent"
+      callbacks_enabled: "ansible.posix.profile_tasks,ansible.posix.timer"
+      callback_result_format: "yaml"
+    connection:
+      pipelining: true
+  inventory:
+    group_vars:
+      all:
+        ansible_podman_mount_detection: false
+        __repos_test_directories:
+          apt: "/etc/apt"
+          dnf: "/etc/yum.repos.d"
+          dnf5: "/etc/yum.repos.d"
+          zypper: "/etc/zypp/repos.d"
+        __repos_test_directory: "{{ __repos_test_directories[ansible_facts.pkg_mgr] }}"
+        __repos_test_presets:
+          AlmaLinux:
+            epel: true
+            crb: false
+          Debian: {}
+          Ubuntu: {}
+          Fedora:
+            rpmfusion_free: true
+            rpmfusion_nonfree: true
+            updates_testing: true
+          openSUSE Leap:
+            obs_devel_tools: true
+            obs_filesystems: true
+          openSUSE Tumbleweed:
+            obs_devel_tools: true
+            obs_filesystems: true
+        __repos_test_rpm_toggles:
+          - path: "{{ __repos_test_directory }}/molecule-supplied.repo"
+            section: "molecule-supplied"
+            enabled: true
+        __repos_test_fedora_toggles:
+          - path: "/etc/yum.repos.d/fedora.repo"
+            section: "fedora"
+            enabled: true
+        __repos_test_toggles: "{{ (__repos_test_rpm_toggles if ansible_facts.pkg_mgr != 'apt' else []) + (__repos_test_fedora_toggles\
+          \ if ansible_facts.distribution == 'Fedora' else []) }}"
+        repos_apt:
+          - name: "molecule-repository"
+            uris:
+              - "file:///tmp/repos-fixture-v1"
+            suites:
+              - "./"
+            enabled: false
+        repos_dnf:
+          - name: "molecule-repository"
+            baseurl:
+              - "file:///tmp/repos-fixture-v1"
+            enabled: false
+        repos_zypper:
+          - name: "molecule-repository"
+            repo: "file:///tmp/repos-fixture-v1"
+            enabled: false
+        repos_toggles: "{{ __repos_test_toggles }}"
+        repos_presets: "{{ __repos_test_presets[ansible_facts.distribution] }}"
+  log: true
+  playbooks:
+    prepare: "../resources/playbooks/prepare.yml"
+    converge: "../resources/playbooks/converge.yml"
+    verify: "../resources/playbooks/verify.yml"
+    side_effect: "../resources/playbooks/side_effect.yml"
+verifier:
+  name: "ansible"
+scenario:
+  test_sequence:
+    - "dependency"
+    - "destroy"
+    - "syntax"
+    - "create"
+    - "prepare"
+    - "check"
+    - "converge"
+    - "idempotence"
+    - "check"
+    - "verify"
+    - "side_effect"
+    - "destroy"
+  name: "default"
+platforms:
+  - name: "repos"
+    image: "docker.io/${uns:-jomrr}/molecule-${img:-fedora}:${tag:-latest}"
+    pre_build_image: true
+    override_command: false
+    systemd: "true"

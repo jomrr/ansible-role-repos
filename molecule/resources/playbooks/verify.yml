@@ -1,0 +1,15 @@
+---
+# role: repos
+# file: molecule/resources/playbooks/verify.yml
+
+- name: REPOS | Verify selected repositories
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: REPOS | Verify definitions, selected presets and preserved supplied settings
+      ansible.builtin.script:
+        cmd: >-
+          ../scripts/verify_repositories.py initial {{ ansible_facts.pkg_mgr }} {{ ansible_facts.distribution | quote }}
+          {{ ansible_facts.distribution_version | quote }}
+        executable: python3
+      changed_when: false

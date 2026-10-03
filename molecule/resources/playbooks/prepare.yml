@@ -1,0 +1,91 @@
+---
+# role: repos
+# file: molecule/resources/playbooks/prepare.yml
+
+- name: REPOS | Prepare repository fixtures
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: REPOS | Install APT test dependencies
+      become: true
+      become_user: root
+      ansible.builtin.apt:
+        name: python3-debian
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_facts.pkg_mgr == 'apt'
+
+    - name: REPOS | Install the RPM metadata fixture tool
+      become: true
+      become_user: root
+      ansible.builtin.package:
+        name: createrepo_c
+        state: present
+      when: ansible_facts.pkg_mgr == 'zypper'
+
+    - name: REPOS | Create local archive directories
+      ansible.builtin.file:
+        path: "/tmp/repos-fixture-{{ __repos_fixture }}"
+        state: directory
+        mode: '0755'
+      loop: [v1, v2]
+      loop_control:
+        loop_var: __repos_fixture
+
+    - name: REPOS | Create local RPM repository metadata
+      ansible.builtin.command:
+        argv: [createrepo_c, "/tmp/repos-fixture-{{ __repos_fixture }}"]
+        creates: "/tmp/repos-fixture-{{ __repos_fixture }}/repodata/repomd.xml"
+      loop: [v1, v2]
+      loop_control:
+        loop_var: __repos_fixture
+      when: ansible_facts.pkg_mgr == 'zypper'
+
+    - name: REPOS | Prepare supplied sections with unrelated settings
+      become: true
+      become_user: root
+      ansible.builtin.copy:
+        dest: "{{ __repos_test_directory }}/molecule-supplied.repo"
+        mode: '0644'
+        content: |
+          # Supplied configuration must survive toggles.
+          [molecule-supplied]
+          name=Supplied repository
+          baseurl=https://supplied.invalid/repository
+          enabled=0
+          gpgcheck=1
+          priority=83
+          # This comment and the sibling section must remain unchanged.
+
+          [molecule-unlisted]
+          name=Unlisted repository
+          baseurl=https://unlisted.invalid/repository
+          enabled=0
+          gpgcheck=1
+      when: ansible_facts.pkg_mgr != 'apt'
+
+    - name: REPOS | Snapshot supplied configuration
+      ansible.builtin.script:
+        cmd: >-
+          ../scripts/verify_repositories.py snapshot {{ ansible_facts.pkg_mgr }} {{ ansible_facts.distribution | quote }}
+          {{ ansible_facts.distribution_version | quote }}
+        executable: python3
+
+    - name: REPOS | Apply empty inputs
+      ansible.builtin.include_role:
+        name: "{{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+      vars:
+        repos_apt: []
+        repos_dnf: []
+        repos_zypper: []
+        repos_toggles: []
+        repos_presets: {}
+
+    - name: REPOS | Verify empty inputs preserve all repositories
+      ansible.builtin.script:
+        cmd: >-
+          ../scripts/verify_repositories.py empty {{ ansible_facts.pkg_mgr }} {{ ansible_facts.distribution | quote }}
+          {{ ansible_facts.distribution_version | quote }}
+        executable: python3
+      changed_when: false

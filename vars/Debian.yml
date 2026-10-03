@@ -1,0 +1,5 @@
+---
+# role: repos
+# file: vars/Debian.yml
+
+__repos_presets: {}

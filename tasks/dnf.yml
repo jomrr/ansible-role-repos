@@ -1,0 +1,30 @@
+---
+# role: repos
+# file: tasks/dnf.yml
+
+- name: REPOS | Manage DNF repository definitions
+  become: true
+  become_user: root
+  ansible.builtin.yum_repository:
+    name: "{{ __repos_repository.name }}"
+    file: "{{ __repos_repository.file | default(__repos_repository.name) }}"
+    description: "{{ __repos_repository.description | default(__repos_repository.name) }}"
+    state: "{{ __repos_repository.state | default(repos_state) }}"
+    enabled: "{{ __repos_repository.enabled | default(repos_enabled) }}"
+    baseurl: "{{ __repos_repository.baseurl | default(omit) }}"
+    metalink: "{{ __repos_repository.metalink | default(omit) }}"
+    mirrorlist: "{{ __repos_repository.mirrorlist | default(omit) }}"
+    gpgkey: "{{ __repos_repository.gpgkey | default(omit) }}"
+    gpgcheck: "{{ __repos_repository.gpgcheck | default(repos_gpgcheck) }}"
+    repo_gpgcheck: "{{ __repos_repository.repo_gpgcheck | default(omit) }}"
+    priority: "{{ __repos_repository.priority | default(omit) }}"
+    exclude: "{{ __repos_repository.exclude | default(omit) }}"
+    includepkgs: "{{ __repos_repository.includepkgs | default(omit) }}"
+    sslverify: true
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ __repos_definitions }}"
+  loop_control:
+    loop_var: __repos_repository
+    label: "{{ __repos_repository.name }}"

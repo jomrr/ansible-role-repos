@@ -1,0 +1,215 @@
+---
+# role: repos
+# file: meta/argument_specs.yml
+
+argument_specs:
+  main:
+    short_description: Define package repositories or toggle supplied RPM repository sections.
+    options:
+      repos_state:
+        type: str
+        default: present
+        choices:
+          - present
+          - absent
+        description: Desired state of explicitly defined repositories.
+      repos_enabled:
+        type: bool
+        default: true
+        description: Default enabled flag for explicitly defined repositories.
+      repos_gpgcheck:
+        type: bool
+        default: true
+        description: Default signature verification for RPM packages.
+      repos_apt:
+        type: list
+        default: []
+        elements: dict
+        options:
+          name:
+            type: str
+            required: true
+            description: Unique lowercase filename stem using letters, digits and hyphens.
+          state:
+            type: str
+            choices:
+              - present
+              - absent
+            description: Override repos_state for this definition.
+          enabled:
+            type: bool
+            description: Override repos_enabled for this definition.
+          types:
+            type: list
+            elements: str
+            choices:
+              - deb
+              - deb-src
+            description: APT package types; defaults to deb.
+          uris:
+            type: list
+            elements: str
+            description: Archive URIs, required when the effective state is present.
+          suites:
+            type: list
+            elements: str
+            description: Distribution suites or exact paths ending in a slash, required
+              when present.
+          components:
+            type: list
+            elements: str
+            description: Archive components; required for suites that are not exact paths.
+          architectures:
+            type: list
+            elements: str
+            description: Architectures to include; omitted means all configured architectures.
+          signed_by:
+            type: str
+            description: Repository-scoped keyring path, HTTPS key URL, fingerprint or armored
+              public key.
+        description: Complete DEB822 definitions for APT; unlisted sources are preserved.
+      repos_dnf:
+        type: list
+        default: []
+        elements: dict
+        options:
+          name:
+            type: str
+            required: true
+            description: Unique lowercase filename stem using letters, digits and hyphens.
+          state:
+            type: str
+            choices:
+              - present
+              - absent
+            description: Override repos_state for this definition.
+          enabled:
+            type: bool
+            description: Override repos_enabled for this definition.
+          file:
+            type: str
+            description: Filename stem below /etc/yum.repos.d; defaults to name; .repo is
+              appended.
+          description:
+            type: str
+            description: Repository description; defaults to name.
+          baseurl:
+            type: list
+            elements: str
+            description: Repository base URLs; provide baseurl, metalink or mirrorlist when
+              present.
+          metalink:
+            type: str
+            description: Metalink URL for the repository.
+          mirrorlist:
+            type: str
+            description: Mirror-list URL for the repository.
+          gpgkey:
+            type: list
+            elements: str
+            description: URLs or file URIs of public RPM signing keys.
+          gpgcheck:
+            type: bool
+            description: Override repos_gpgcheck for this definition.
+          repo_gpgcheck:
+            type: bool
+            description: Verify repository metadata signatures.
+          priority:
+            type: int
+            description: Repository priority; lower values take precedence.
+          exclude:
+            type: list
+            elements: str
+            description: Package patterns excluded from this repository.
+          includepkgs:
+            type: list
+            elements: str
+            description: Package patterns included from this repository.
+        description: Complete DNF or DNF5 definitions; listed sections are fully owned by
+          this role.
+      repos_zypper:
+        type: list
+        default: []
+        elements: dict
+        options:
+          name:
+            type: str
+            required: true
+            description: Unique lowercase filename stem using letters, digits and hyphens.
+          state:
+            type: str
+            choices:
+              - present
+              - absent
+            description: Override repos_state for this definition.
+          enabled:
+            type: bool
+            description: Override repos_enabled for this definition.
+          repo:
+            type: str
+            description: Repository base URI, required when present; use a base URI, not
+              a .repo file.
+          description:
+            type: str
+            description: Repository description.
+          gpgcheck:
+            type: bool
+            description: Override repos_gpgcheck for this definition.
+          autorefresh:
+            type: bool
+            description: Refresh metadata automatically; the module defaults to true.
+          auto_import_keys:
+            type: bool
+            description: Import signing keys and refresh on creation or change; the module
+              defaults to false.
+          priority:
+            type: int
+            description: Repository priority; lower values take precedence.
+        description: Complete Zypper definitions; listed repositories are fully owned by
+          this role.
+      repos_toggles:
+        type: list
+        default: []
+        elements: dict
+        options:
+          path:
+            type: path
+            required: true
+            description: Absolute path of a supplied .repo file; the file and section must
+              exist.
+          section:
+            type: str
+            required: true
+            description: Exact repository section name.
+          enabled:
+            type: bool
+            required: true
+            description: Desired enabled flag, independent of repos_enabled.
+        description: Change only enabled in supplied RPM repository sections.
+      repos_presets:
+        type: dict
+        default: {}
+        options:
+          epel:
+            type: bool
+            description: Define EPEL on AlmaLinux; CRB is selected separately.
+          crb:
+            type: bool
+            description: Toggle the supplied AlmaLinux CRB section.
+          rpmfusion_free:
+            type: bool
+            description: Define RPM Fusion Free release and updates repositories on Fedora.
+          rpmfusion_nonfree:
+            type: bool
+            description: Define RPM Fusion Nonfree release and updates repositories on Fedora.
+          updates_testing:
+            type: bool
+            description: Toggle the supplied Fedora updates-testing section.
+          obs_devel_tools:
+            type: bool
+            description: Define the devel:tools OBS repository on openSUSE.
+          obs_filesystems:
+            type: bool
+            description: Define the filesystems OBS repository on openSUSE.
+        description: Named distribution switches; omitted means unmanaged, true enables
+          and false disables.

@@ -1,0 +1,9 @@
+---
+# role: repos
+# file: molecule/resources/playbooks/converge.yml
+
+- name: "Molecule | converge | repos"
+  hosts: all
+  gather_facts: true
+  roles:
+    - role: "{{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY') }}"

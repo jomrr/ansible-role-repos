@@ -1,0 +1,52 @@
+---
+# role: repos
+# file: defaults/main.yml
+
+# Desired state of explicitly defined repositories unless overridden per item.
+# Choices: present, absent
+repos_state: present
+
+# Enable explicitly defined repositories unless overridden per item.
+repos_enabled: true
+
+# Verify RPM package signatures unless overridden per repository.
+repos_gpgcheck: true
+
+# DEB822 repository definitions for Debian and Ubuntu.
+repos_apt: []
+# repos_apt:
+#   - name: organization
+#     uris: [https://packages.example.org/debian]
+#     suites: [stable]
+#     components: [main]
+#     signed_by: /etc/apt/keyrings/organization.asc
+
+# Complete repository definitions for DNF and DNF5; listed sections are role-owned.
+repos_dnf: []
+# repos_dnf:
+#   - name: organization
+#     description: Organization packages
+#     baseurl: [https://packages.example.org/rpm/$releasever/$basearch]
+#     gpgkey: [https://packages.example.org/keys/rpm.asc]
+
+# Complete repository definitions for Zypper; listed repositories are role-owned.
+repos_zypper: []
+# repos_zypper:
+#   - name: organization
+#     repo: https://packages.example.org/opensuse
+#     auto_import_keys: true
+
+# Enabled flags to change in supplied RPM .repo files, preserving other settings.
+repos_toggles: []
+# repos_toggles:
+#   - path: /etc/yum.repos.d/fedora.repo
+#     section: fedora
+#     enabled: true
+
+# Distribution-specific switches; omitted presets leave their repositories unmanaged.
+repos_presets: {}
+# AlmaLinux: epel, crb; Fedora: rpmfusion_free, rpmfusion_nonfree, updates_testing.
+# openSUSE Leap and Tumbleweed: obs_devel_tools, obs_filesystems.
+# repos_presets:
+#   epel: true
+#   crb: true

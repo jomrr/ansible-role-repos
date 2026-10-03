@@ -1,0 +1,41 @@
+[project]
+name = "repos"
+version = "0.0.0"
+description = "Ansible role for managing explicitly selected package repositories with APT, DNF and Zypper."
+requires-python = ">=3.12"
+authors = [
+  { name = "Jonas Mauer" },
+]
+license = "MIT"
+keywords = ["system", "packaging", "repositories"]
+
+[project.urls]
+Repository = "https://github.com/jomrr/ansible-role-repos"
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+ansible = [
+  "ansible-core==2.20.*",
+  "ansible-lint==26.*",
+]
+
+podman = [
+  "molecule==26.*",
+  "molecule-plugins[podman]==25.*",
+]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+
+[tool.semantic_release]
+branch = "main"
+commit_message = "build(release): version {version}"
+major_on_zero = true
+upload_to_pypi = false
+upload_to_vcs_release = true
+tag_format = "v{version}"
+version_toml = [
+    "pyproject.toml:project.version",
+]

@@ -1,0 +1,18 @@
+---
+# role: repos
+# file: vars/AlmaLinux.yml
+
+__repos_presets:
+  epel:
+    repositories:
+      - name: epel
+        description: Extra Packages for Enterprise Linux $releasever - $basearch
+        metalink: https://mirrors.fedoraproject.org/metalink?repo=epel-$releasever&arch=$basearch
+        gpgkey:
+          - "https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_facts.distribution_major_version }}"
+        enabled: "{{ repos_presets.epel | default(false) }}"
+  crb:
+    toggles:
+      - path: /etc/yum.repos.d/almalinux-crb.repo
+        section: crb
+        enabled: "{{ repos_presets.crb | default(false) }}"

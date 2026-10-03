@@ -1,0 +1,22 @@
+---
+# role: repos
+# file: tasks/zypper.yml
+
+- name: REPOS | Manage Zypper repository definitions
+  become: true
+  become_user: root
+  community.general.zypper_repository:
+    name: "{{ __repos_repository.name }}"
+    # Zypper stores local file URIs with one slash; match its comparison format.
+    repo: "{{ __repos_repository.repo | regex_replace('^file:///', 'file:/') if __repos_repository.repo is defined else omit }}"
+    description: "{{ __repos_repository.description | default(omit) }}"
+    state: "{{ __repos_repository.state | default(repos_state) }}"
+    enabled: "{{ __repos_repository.enabled | default(repos_enabled) }}"
+    disable_gpg_check: "{{ not (__repos_repository.gpgcheck | default(repos_gpgcheck)) }}"
+    autorefresh: "{{ __repos_repository.autorefresh | default(omit) }}"
+    auto_import_keys: "{{ __repos_repository.auto_import_keys | default(omit) }}"
+    priority: "{{ __repos_repository.priority | default(omit) }}"
+  loop: "{{ __repos_definitions }}"
+  loop_control:
+    loop_var: __repos_repository
+    label: "{{ __repos_repository.name }}"

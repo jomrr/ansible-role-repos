@@ -1,0 +1,23 @@
+---
+# role: repos
+# file: tasks/apt.yml
+
+- name: REPOS | Manage DEB822 repository definitions
+  become: true
+  become_user: root
+  ansible.builtin.deb822_repository:
+    name: "{{ __repos_repository.name }}"
+    state: "{{ __repos_repository.state | default(repos_state) }}"
+    enabled: "{{ __repos_repository.enabled | default(repos_enabled) }}"
+    types: "{{ __repos_repository.types | default(omit) }}"
+    uris: "{{ __repos_repository.uris | default(omit) }}"
+    suites: "{{ __repos_repository.suites | default(omit) }}"
+    components: "{{ __repos_repository.components | default(omit) }}"
+    architectures: "{{ __repos_repository.architectures | default(omit) }}"
+    signed_by: "{{ __repos_repository.signed_by | default(omit) }}"
+    install_python_debian: true
+    mode: '0644'
+  loop: "{{ __repos_definitions }}"
+  loop_control:
+    loop_var: __repos_repository
+    label: "{{ __repos_repository.name }}"

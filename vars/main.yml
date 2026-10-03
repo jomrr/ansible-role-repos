@@ -1,0 +1,18 @@
+---
+# role: repos
+# file: vars/main.yml
+
+__repos_backends:
+  apt: apt
+  dnf: dnf
+  dnf5: dnf
+  zypper: zypper
+
+# Reuse the selected inputs for validation and backend execution.
+__repos_definitions: >-
+  {{ lookup('ansible.builtin.vars', 'repos_' ~ __repos_backends[ansible_facts.pkg_mgr])
+     + (__repos_presets | dict2items | selectattr('key', 'in', repos_presets)
+        | map(attribute='value.repositories', default=[]) | flatten) }}
+__repos_toggles: >-
+  {{ repos_toggles + (__repos_presets | dict2items | selectattr('key', 'in', repos_presets)
+                     | map(attribute='value.toggles', default=[]) | flatten) }}
