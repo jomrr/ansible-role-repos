@@ -8,11 +8,13 @@ __repos_backends:
   dnf5: dnf
   zypper: zypper
 
-# Reuse the selected inputs for validation and backend execution.
-__repos_definitions: >-
+__repos_directories:
+  apt: /etc/apt/sources.list.d
+  dnf: /etc/yum.repos.d
+  zypper: /etc/zypp/repos.d
+
+# Resolve target identities and presets before any backend writes.
+__repos_repositories: >-
   {{ lookup('ansible.builtin.vars', 'repos_' ~ __repos_backends[ansible_facts.pkg_mgr])
-     + (__repos_presets | dict2items | selectattr('key', 'in', repos_presets)
-        | map(attribute='value.repositories', default=[]) | flatten) }}
-__repos_toggles: >-
-  {{ repos_toggles + (__repos_presets | dict2items | selectattr('key', 'in', repos_presets)
-                     | map(attribute='value.toggles', default=[]) | flatten) }}
+     | jomrr.general.repo(__repos_presets, __repos_backends[ansible_facts.pkg_mgr], {'enabled': repos_enabled, 'state': repos_state},
+                          __repos_directories[__repos_backends[ansible_facts.pkg_mgr]]) }}

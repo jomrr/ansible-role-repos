@@ -4,35 +4,24 @@
 
 __repos_presets:
   rpmfusion_free:
-    repositories:
-      - name: rpmfusion-free
-        description: RPM Fusion for Fedora $releasever - Free
-        metalink: https://mirrors.rpmfusion.org/metalink?repo=free-fedora-$releasever&arch=$basearch
-        gpgkey:
-          - https://download1.rpmfusion.org/free/fedora/RPM-GPG-KEY-rpmfusion-free-fedora-2020
-        enabled: "{{ repos_presets.rpmfusion_free | default(false) }}"
-      - name: rpmfusion-free-updates
-        description: RPM Fusion for Fedora $releasever - Free - Updates
-        metalink: https://mirrors.rpmfusion.org/metalink?repo=free-fedora-updates-released-$releasever&arch=$basearch
-        gpgkey:
-          - https://download1.rpmfusion.org/free/fedora/RPM-GPG-KEY-rpmfusion-free-fedora-2020
-        enabled: "{{ repos_presets.rpmfusion_free | default(false) }}"
+    - name: rpmfusion-free
+      description: RPM Fusion for Fedora $releasever - Free
+      metalink: https://mirrors.rpmfusion.org/metalink?repo=free-fedora-$releasever&arch=$basearch
+      gpgkey:
+        - https://download1.rpmfusion.org/free/fedora/RPM-GPG-KEY-rpmfusion-free-fedora-2020
+    - name: rpmfusion-free-updates
+      description: RPM Fusion for Fedora $releasever - Free - Updates
+      metalink: https://mirrors.rpmfusion.org/metalink?repo=free-fedora-updates-released-$releasever&arch=$basearch
+      gpgkey:
+        - https://download1.rpmfusion.org/free/fedora/RPM-GPG-KEY-rpmfusion-free-fedora-2020
   rpmfusion_nonfree:
-    repositories:
-      - name: rpmfusion-nonfree
-        description: RPM Fusion for Fedora $releasever - Nonfree
-        metalink: https://mirrors.rpmfusion.org/metalink?repo=nonfree-fedora-$releasever&arch=$basearch
-        gpgkey:
-          - https://download1.rpmfusion.org/nonfree/fedora/RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020
-        enabled: "{{ repos_presets.rpmfusion_nonfree | default(false) }}"
-      - name: rpmfusion-nonfree-updates
-        description: RPM Fusion for Fedora $releasever - Nonfree - Updates
-        metalink: https://mirrors.rpmfusion.org/metalink?repo=nonfree-fedora-updates-released-$releasever&arch=$basearch
-        gpgkey:
-          - https://download1.rpmfusion.org/nonfree/fedora/RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020
-        enabled: "{{ repos_presets.rpmfusion_nonfree | default(false) }}"
-  updates_testing:
-    toggles:
-      - path: /etc/yum.repos.d/fedora-updates-testing.repo
-        section: updates-testing
-        enabled: "{{ repos_presets.updates_testing | default(false) }}"
+    - name: rpmfusion-nonfree
+      description: RPM Fusion for Fedora $releasever - Nonfree
+      metalink: https://mirrors.rpmfusion.org/metalink?repo=nonfree-fedora-$releasever&arch=$basearch
+      gpgkey:
+        - https://download1.rpmfusion.org/nonfree/fedora/RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020
+    - name: rpmfusion-nonfree-updates
+      description: RPM Fusion for Fedora $releasever - Nonfree - Updates
+      metalink: https://mirrors.rpmfusion.org/metalink?repo=nonfree-fedora-updates-released-$releasever&arch=$basearch
+      gpgkey:
+        - https://download1.rpmfusion.org/nonfree/fedora/RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020

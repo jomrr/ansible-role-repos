@@ -14,21 +14,5 @@
 - name: REPOS | Validate requested repositories
   ansible.builtin.import_tasks: assert.yml
 
-- name: REPOS | Manage repository definitions with the detected package manager
+- name: REPOS | Converge repositories with the detected package manager
   ansible.builtin.include_tasks: "{{ __repos_backends[ansible_facts.pkg_mgr] }}.yml"
-
-- name: REPOS | Toggle supplied repository sections
-  become: true
-  become_user: root
-  community.general.ini_file:
-    path: "{{ __repos_toggle.path }}"
-    section: "{{ __repos_toggle.section }}"
-    option: enabled
-    value: "{{ __repos_toggle.enabled | int | string }}"
-    create: false
-    no_extra_spaces: true
-    ignore_spaces: true
-  loop: "{{ __repos_toggles }}"
-  loop_control:
-    loop_var: __repos_toggle
-    label: "{{ __repos_toggle.path }} [{{ __repos_toggle.section }}]"

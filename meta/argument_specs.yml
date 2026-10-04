@@ -4,7 +4,8 @@
 
 argument_specs:
   main:
-    short_description: Define package repositories or toggle supplied RPM repository sections.
+    short_description: Declare desired repository settings, including presets and supplied
+      sources, in each backend list.
     options:
       repos_state:
         type: str
@@ -16,11 +17,13 @@ argument_specs:
       repos_enabled:
         type: bool
         default: true
-        description: Default enabled flag for explicitly defined repositories.
+        description: Enabled flag for new repositories and selected presets; omitted settings
+          of supplied repositories remain unchanged.
       repos_gpgcheck:
         type: bool
         default: true
-        description: Default signature verification for RPM packages.
+        description: Signature verification for new RPM repositories; item settings override
+          this policy.
       repos_apt:
         type: list
         default: []
@@ -28,17 +31,17 @@ argument_specs:
         options:
           name:
             type: str
-            required: true
-            description: Unique lowercase filename stem using letters, digits and hyphens.
+            description: Repository identifier; APT filename stem, or RPM section ID. Presets
+              supply this value.
           state:
             type: str
             choices:
               - present
               - absent
-            description: Override repos_state for this definition.
+            description: Desired presence; overrides repos_state.
           enabled:
             type: bool
-            description: Override repos_enabled for this definition.
+            description: Desired enabled flag; preserved when omitted on a supplied repository.
           types:
             type: list
             elements: str
@@ -49,25 +52,85 @@ argument_specs:
           uris:
             type: list
             elements: str
-            description: Archive URIs, required when the effective state is present.
+            description: Desired archive URIs; required for new sources.
           suites:
             type: list
             elements: str
-            description: Distribution suites or exact paths ending in a slash, required
-              when present.
+            description: Suites identifying sources within the file; required for new sources,
+              omitted selects the whole file.
           components:
             type: list
             elements: str
-            description: Archive components; required for suites that are not exact paths.
+            description: Desired archive components; required for new suites that are not
+              exact paths.
           architectures:
             type: list
             elements: str
-            description: Architectures to include; omitted means all configured architectures.
+            description: Desired architectures; omitted preserves existing settings.
           signed_by:
             type: str
             description: Repository-scoped keyring path, HTTPS key URL, fingerprint or armored
               public key.
-        description: Complete DEB822 definitions for APT; unlisted sources are preserved.
+          preset:
+            type: str
+            description: Distribution preset; supplies target names and default settings
+              for this entry.
+          path:
+            type: path
+            description: Absolute APT source path instead of name; suites select sources
+              within the file.
+          repositories:
+            type: list
+            elements: dict
+            options:
+              name:
+                type: str
+                description: Repository identifier; APT filename stem, or RPM section ID.
+                  Presets supply this value.
+                required: true
+              state:
+                type: str
+                choices:
+                  - present
+                  - absent
+                description: Desired presence; overrides repos_state.
+              enabled:
+                type: bool
+                description: Desired enabled flag; preserved when omitted on a supplied
+                  repository.
+              types:
+                type: list
+                elements: str
+                choices:
+                  - deb
+                  - deb-src
+                description: APT package types; defaults to deb.
+              uris:
+                type: list
+                elements: str
+                description: Desired archive URIs; required for new sources.
+              suites:
+                type: list
+                elements: str
+                description: Suites identifying sources within the file; required for new
+                  sources, omitted selects the whole file.
+              components:
+                type: list
+                elements: str
+                description: Desired archive components; required for new suites that are
+                  not exact paths.
+              architectures:
+                type: list
+                elements: str
+                description: Desired architectures; omitted preserves existing settings.
+              signed_by:
+                type: str
+                description: Repository-scoped keyring path, HTTPS key URL, fingerprint
+                  or armored public key.
+            description: Named settings for individual repositories within the selected
+              preset.
+        description: Desired APT repositories, selected presets and supplied sources; unspecified
+          settings are preserved.
       repos_dnf:
         type: list
         default: []
@@ -75,17 +138,17 @@ argument_specs:
         options:
           name:
             type: str
-            required: true
-            description: Unique lowercase filename stem using letters, digits and hyphens.
+            description: Repository identifier; APT filename stem, or RPM section ID. Presets
+              supply this value.
           state:
             type: str
             choices:
               - present
               - absent
-            description: Override repos_state for this definition.
+            description: Desired presence; overrides repos_state.
           enabled:
             type: bool
-            description: Override repos_enabled for this definition.
+            description: Desired enabled flag; preserved when omitted on a supplied repository.
           file:
             type: str
             description: Filename stem below /etc/yum.repos.d; defaults to name; .repo is
@@ -110,7 +173,8 @@ argument_specs:
             description: URLs or file URIs of public RPM signing keys.
           gpgcheck:
             type: bool
-            description: Override repos_gpgcheck for this definition.
+            description: Desired signature verification; omitted preserves existing settings,
+              with repos_gpgcheck used for new repositories.
           repo_gpgcheck:
             type: bool
             description: Verify repository metadata signatures.
@@ -125,8 +189,69 @@ argument_specs:
             type: list
             elements: str
             description: Package patterns included from this repository.
-        description: Complete DNF or DNF5 definitions; listed sections are fully owned by
-          this role.
+          preset:
+            type: str
+            description: Distribution preset; supplies target names and default settings
+              for this entry.
+          repositories:
+            type: list
+            elements: dict
+            options:
+              name:
+                type: str
+                description: Repository identifier; APT filename stem, or RPM section ID.
+                  Presets supply this value.
+                required: true
+              state:
+                type: str
+                choices:
+                  - present
+                  - absent
+                description: Desired presence; overrides repos_state.
+              enabled:
+                type: bool
+                description: Desired enabled flag; preserved when omitted on a supplied
+                  repository.
+              description:
+                type: str
+                description: Repository description; defaults to name.
+              baseurl:
+                type: list
+                elements: str
+                description: Repository base URLs; provide baseurl, metalink or mirrorlist
+                  when present.
+              metalink:
+                type: str
+                description: Metalink URL for the repository.
+              mirrorlist:
+                type: str
+                description: Mirror-list URL for the repository.
+              gpgkey:
+                type: list
+                elements: str
+                description: URLs or file URIs of public RPM signing keys.
+              gpgcheck:
+                type: bool
+                description: Desired signature verification; omitted preserves existing
+                  settings, with repos_gpgcheck used for new repositories.
+              repo_gpgcheck:
+                type: bool
+                description: Verify repository metadata signatures.
+              priority:
+                type: int
+                description: Repository priority; lower values take precedence.
+              exclude:
+                type: list
+                elements: str
+                description: Package patterns excluded from this repository.
+              includepkgs:
+                type: list
+                elements: str
+                description: Package patterns included from this repository.
+            description: Named settings for individual repositories within the selected
+              preset.
+        description: Desired DNF repositories, selected presets and supplied sources; unspecified
+          settings are preserved.
       repos_zypper:
         type: list
         default: []
@@ -134,85 +259,87 @@ argument_specs:
         options:
           name:
             type: str
-            required: true
-            description: Unique lowercase filename stem using letters, digits and hyphens.
+            description: Repository identifier; APT filename stem, or RPM section ID. Presets
+              supply this value.
           state:
             type: str
             choices:
               - present
               - absent
-            description: Override repos_state for this definition.
+            description: Desired presence; overrides repos_state.
           enabled:
             type: bool
-            description: Override repos_enabled for this definition.
+            description: Desired enabled flag; preserved when omitted on a supplied repository.
           repo:
             type: str
-            description: Repository base URI, required when present; use a base URI, not
-              a .repo file.
+            description: Desired repository base URI; required when creating a repository.
           description:
             type: str
             description: Repository description.
           gpgcheck:
             type: bool
-            description: Override repos_gpgcheck for this definition.
+            description: Desired signature verification; omitted preserves existing settings,
+              with repos_gpgcheck used for new repositories.
           autorefresh:
             type: bool
-            description: Refresh metadata automatically; the module defaults to true.
+            description: Desired automatic refresh flag; preserved when omitted, true for
+              new repositories.
           auto_import_keys:
             type: bool
-            description: Import signing keys and refresh on creation or change; the module
-              defaults to false.
+            description: Import the repository signing key and refresh after a configuration
+              change; defaults to false.
           priority:
             type: int
             description: Repository priority; lower values take precedence.
-        description: Complete Zypper definitions; listed repositories are fully owned by
-          this role.
-      repos_toggles:
-        type: list
-        default: []
-        elements: dict
-        options:
-          path:
-            type: path
-            required: true
-            description: Absolute path of a supplied .repo file; the file and section must
-              exist.
-          section:
+          preset:
             type: str
-            required: true
-            description: Exact repository section name.
-          enabled:
-            type: bool
-            required: true
-            description: Desired enabled flag, independent of repos_enabled.
-        description: Change only enabled in supplied RPM repository sections.
-      repos_presets:
-        type: dict
-        default: {}
-        options:
-          backports:
-            type: bool
-            description: Define the detected release's Backports source on Debian or Ubuntu.
-          epel:
-            type: bool
-            description: Define EPEL on AlmaLinux; CRB is selected separately.
-          crb:
-            type: bool
-            description: Toggle the supplied AlmaLinux CRB section.
-          rpmfusion_free:
-            type: bool
-            description: Define RPM Fusion Free release and updates repositories on Fedora.
-          rpmfusion_nonfree:
-            type: bool
-            description: Define RPM Fusion Nonfree release and updates repositories on Fedora.
-          updates_testing:
-            type: bool
-            description: Toggle the supplied Fedora updates-testing section.
-          obs_devel_tools:
-            type: bool
-            description: Define the devel:tools OBS repository on openSUSE.
-          obs_filesystems:
-            type: bool
-            description: Define the filesystems OBS repository on openSUSE.
-        description: Named distribution switches; omitted means unmanaged, true enables
-          and false disables.
+            description: Distribution preset; supplies target names and default settings
+              for this entry.
+          file:
+            type: str
+            description: Filename stem below /etc/zypp/repos.d; defaults to name; .repo
+              is appended.
+          repositories:
+            type: list
+            elements: dict
+            options:
+              name:
+                type: str
+                description: Repository identifier; APT filename stem, or RPM section ID.
+                  Presets supply this value.
+                required: true
+              state:
+                type: str
+                choices:
+                  - present
+                  - absent
+                description: Desired presence; overrides repos_state.
+              enabled:
+                type: bool
+                description: Desired enabled flag; preserved when omitted on a supplied
+                  repository.
+              repo:
+                type: str
+                description: Desired repository base URI; required when creating a repository.
+              description:
+                type: str
+                description: Repository description.
+              gpgcheck:
+                type: bool
+                description: Desired signature verification; omitted preserves existing
+                  settings, with repos_gpgcheck used for new repositories.
+              autorefresh:
+                type: bool
+                description: Desired automatic refresh flag; preserved when omitted, true
+                  for new repositories.
+              auto_import_keys:
+                type: bool
+                description: Import the repository signing key and refresh after a configuration
+                  change; defaults to false.
+              priority:
+                type: int
+                description: Repository priority; lower values take precedence.
+            description: Named settings for individual repositories within the selected
+              preset.
+        description: Desired ZYPPER repositories, selected presets and supplied sources;
+          unspecified settings are preserved.

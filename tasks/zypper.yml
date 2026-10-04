@@ -2,21 +2,24 @@
 # role: repos
 # file: tasks/zypper.yml
 
-- name: REPOS | Manage Zypper repository definitions
+- name: REPOS | Converge selected Zypper repositories
   become: true
   become_user: root
-  community.general.zypper_repository:
+  jomrr.general.repo_rpm:
+    backend: zypper
+    path: "{{ __repos_repository.path }}"
     name: "{{ __repos_repository.name }}"
-    # Zypper stores local file URIs with one slash; match its comparison format.
-    repo: "{{ __repos_repository.repo | regex_replace('^file:///', 'file:/') if __repos_repository.repo is defined else omit }}"
+    state: "{{ __repos_repository.state }}"
+    default_enabled: "{{ repos_enabled }}"
+    default_gpgcheck: "{{ repos_gpgcheck }}"
+    enabled: "{{ __repos_repository.enabled | default(omit) }}"
     description: "{{ __repos_repository.description | default(omit) }}"
-    state: "{{ __repos_repository.state | default(repos_state) }}"
-    enabled: "{{ __repos_repository.enabled | default(repos_enabled) }}"
-    disable_gpg_check: "{{ not (__repos_repository.gpgcheck | default(repos_gpgcheck)) }}"
+    repo: "{{ __repos_repository.repo | default(omit) }}"
+    gpgcheck: "{{ __repos_repository.gpgcheck | default(omit) }}"
     autorefresh: "{{ __repos_repository.autorefresh | default(omit) }}"
     auto_import_keys: "{{ __repos_repository.auto_import_keys | default(omit) }}"
     priority: "{{ __repos_repository.priority | default(omit) }}"
-  loop: "{{ __repos_definitions }}"
+  loop: "{{ __repos_repositories }}"
   loop_control:
     loop_var: __repos_repository
     label: "{{ __repos_repository.name }}"

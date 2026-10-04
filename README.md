@@ -11,59 +11,90 @@ and Zypper.
 
 ## Purpose
 
-Manage explicitly selected package repositories on AlmaLinux, Debian,
-Fedora, openSUSE Leap, openSUSE Tumbleweed and Ubuntu. Empty inputs make
-no changes. Repeated application of unchanged inputs is idempotent.
+Manage explicitly selected package repositories on AlmaLinux,
+Debian, Fedora, openSUSE Leap, openSUSE Tumbleweed and Ubuntu. Empty
+inputs make no changes. Repeated application of unchanged inputs is
+idempotent.
 
-`repos_apt`, `repos_dnf` and `repos_zypper` describe complete repository
-definitions. Only the list matching the detected package manager is applied;
-DNF and DNF5 share the DNF backend. `repos_toggles` changes only `enabled`
-in a supplied RPM repository section, preserving other options and comments.
+Declare repositories in `repos_apt`, `repos_dnf` or `repos_zypper`.
+Only the list matching the detected package manager is applied; DNF
+and DNF5 share a backend. Every entry describes desired state,
+whether the repository is new, supplied by the distribution or
+selected through a preset. There is no operation mode.
 
-Every definition requires `name`. `state` and `enabled` override `repos_state`
-and `repos_enabled` per item. APT entries with `state: present` also require
-`uris` and `suites`; non-path suites require `components`. Optional APT fields
-are `types`, `architectures` and `signed_by`.
+`state: present` creates a missing repository or converges the
+supplied settings; `enabled: false` disables it without removing it,
+and `state: absent` removes it. Unspecified fields of supplied
+repositories are preserved. New repositories use `repos_enabled` and
+`repos_gpgcheck` as applicable. Entries override these policies.
+`repos_state` supplies the default presence. Omitting an entry
+leaves its last configuration intact.
 
-DNF entries with `state: present` require `baseurl`, `metalink` or `mirrorlist`.
-Optional fields are `file`, `description`, `gpgkey`, `gpgcheck`,
-`repo_gpgcheck`,
-`priority`, `exclude` and `includepkgs`. `baseurl`, `gpgkey`, `exclude` and
-`includepkgs` are lists of strings. Zypper entries with `state: present`
-require `repo`; optional fields are `description`, `gpgcheck`, `autorefresh`,
-`auto_import_keys` and `priority`. `gpgcheck` overrides `repos_gpgcheck`.
+RPM entries identify a section with `name` and optionally `file`, a
+filename stem below the backend repository directory. `file`
+defaults to `name`. DNF URLs use `baseurl`, `metalink` or
+`mirrorlist`; Zypper uses `repo`. Choosing a URL removes alternative
+mirror sources. Changes preserve unrelated options, sections and
+comments. Creation requires a URL. Removing the last section removes
+its file.
 
-Toggle entries require `path`, `section` and `enabled`. They always preserve
-the rest of the selected file; the complete-definition policies do not apply.
+APT entries identify a `.sources` file with `name`, or an absolute
+`.sources` or legacy `.list` `path`. `suites` selects all matching
+sources, including disabled and `deb-src` entries; omitting it
+selects the whole file. New DEB822 sources require `suites` and
+`uris`, plus `components` unless suites are exact paths ending in
+`/`. Supplied stanzas retain unspecified fields and are split when
+selected suites need different settings. Missing suites are created
+only with the required fields. `state: absent` with suites removes
+those suites; without suites it removes the selected file. Legacy
+`.list` files support `uris`, `enabled` and `state` for supplied
+suites, with exactly one URI. Use DEB822 for new sources.
+
+Select a distribution preset with `preset: epel` or `preset:
+backports` in the same backend list. Additional fields on that entry
+override the preset defaults. Selected presets default to
+`repos_enabled`; `enabled: false` disables them. For a preset
+containing several repositories, named entries under `repositories`
+provide individual overrides. RPM URL overrides replace inherited
+alternatives. Presets supply target identities; `name`, `file` and
+`path` cannot accompany `preset`.
+
+Presets provide repository definitions with distribution-specific
+URLs, signing keys or related repositories. RPM repositories supplied
+by the distribution are selected directly with `name` and `file`.
+
+The role rejects repeated RPM IDs, including IDs expanded from
+presets. APT entries in the same file must select disjoint suites.
+Source paths must be normalized; APT symlinks are rejected. APT
+validates changed files before replacement without downloading
+metadata.
 
 ## Scope
 
 ### Managed
 
-- Creation, modification, disabling and removal of explicitly defined
+- Desired presence, enabled state and settings of explicitly selected
   repositories.
-- Enabled flags in explicitly selected RPM repository files and sections.
-- Distribution presets selected by name under repos_presets.
+- Distribution presets and private mirrors declared within each backend list.
 
 ### Not Managed
 
 - Repositories omitted from the input, package installation or distribution
   upgrades.
-- Repository credentials; use the package manager's separate credential
-  configuration.
-- Cache refresh for APT and DNF, or removal of externally provisioned signing
-  keys.
+- Repository credentials; use separate package-manager credential configuration.
+- APT and DNF metadata refresh, or removal of signing keys.
 
 ## Requirements
 
-- community.general provides ini_file and zypper_repository.
-- APT uses python3-debian; the role enables the module's automatic installation
-  with the system Python.
+- jomrr.general >=1.1.0 provides the repository modules and preset resolver.
+- community.general provides Ansible's Zypper package backend.
 
 ## Dependencies
 
 ```yaml
 collections:
+  - name: jomrr.general
+    version: '>=1.1.0'
   - name: community.general
     version: '>=12.0.0'
   - name: ansible.posix
@@ -88,7 +119,8 @@ repos_state: present
 
 Type: `bool`. Required: `false`.
 
-Default enabled flag for explicitly defined repositories.
+Enabled flag for new repositories and selected presets; omitted settings of
+supplied repositories remain unchanged.
 
 Default:
 
@@ -100,7 +132,8 @@ repos_enabled: true
 
 Type: `bool`. Required: `false`.
 
-Default signature verification for RPM packages.
+Signature verification for new RPM repositories; item settings override this
+policy.
 
 Default:
 
@@ -112,7 +145,8 @@ repos_gpgcheck: true
 
 Type: `list`. Required: `false`.
 
-Complete DEB822 definitions for APT; unlisted sources are preserved.
+Desired APT repositories, selected presets and supplied sources; unspecified
+settings are preserved.
 
 Default:
 
@@ -124,7 +158,8 @@ repos_apt: []
 
 Type: `list`. Required: `false`.
 
-Complete DNF or DNF5 definitions; listed sections are fully owned by this role.
+Desired DNF repositories, selected presets and supplied sources; unspecified
+settings are preserved.
 
 Default:
 
@@ -136,7 +171,8 @@ repos_dnf: []
 
 Type: `list`. Required: `false`.
 
-Complete Zypper definitions; listed repositories are fully owned by this role.
+Desired ZYPPER repositories, selected presets and supplied sources; unspecified
+settings are preserved.
 
 Default:
 
@@ -144,98 +180,61 @@ Default:
 repos_zypper: []
 ```
 
-### `repos_toggles`
-
-Type: `list`. Required: `false`.
-
-Change only enabled in supplied RPM repository sections.
-
-Default:
-
-```yaml
-repos_toggles: []
-```
-
-### `repos_presets`
-
-Type: `dict`. Required: `false`.
-
-Named distribution switches; omitted means unmanaged, true enables and false
-disables.
-
-Default:
-
-```yaml
-repos_presets: {}
-```
-
 ## Managed Files
 
-- `APT: /etc/apt/sources.list.d/<name>.sources and module-managed keys in
-  /etc/apt/keyrings.`
+- `APT: /etc/apt/sources.list.d/<name>.sources or an explicit path.`
 - `DNF: /etc/yum.repos.d/<file-or-name>.repo.`
-- `Zypper: /etc/zypp/repos.d/<name>.repo.`
-- `Explicit paths supplied through repos_toggles.`
+- `Zypper: /etc/zypp/repos.d/<file-or-name>.repo.`
+- `Binary APT signing keys downloaded from HTTPS are stored under
+  /etc/apt/keyrings/<URL-hash>.gpg.`
 
 ## Check Mode
 
-APT and DNF definitions and RPM enabled flags support check mode.
+Repository changes support check mode on every backend.
 
-- python3-debian must already be installed for the first APT check-mode run.
-- community.general.zypper_repository does not support check mode; Zypper
-  definitions are skipped by that module.
+- APT file diffs are omitted because supplied files can contain credentials.
+- Zypper signing-key import and metadata refresh are skipped in check mode.
 
 ## Service Behavior
 
-No service or handler is managed.
+No service is managed. Changed Zypper repositories refresh when auto_import_keys
+is enabled.
 
 ## Security Notes
 
-- RPM signature checking defaults to true; DNF TLS verification remains enabled.
-- Use signed_by to scope APT signing keys to a repository instead of adding
-  global trust.
-- OBS presets import the selected repository's signing key when adding or
-  changing it.
+- RPM signature checking defaults to true for new repositories; DNF TLS
+  verification defaults to enabled.
+- Use signed_by to scope APT signing keys. HTTPS armored keys are embedded;
+  binary keys use a scoped keyring.
+- OBS presets import the selected repository signing key when its settings
+  change.
 
 ## Operational Notes
 
-- Complete definitions own their listed sections. Use repos_toggles for supplied
-  repositories such as fedora in fedora.repo; it requires the file and section
-  to exist.
-- Definition names are lowercase filename stems containing letters, digits and
-  hyphens. DNF file overrides also allow dots and underscores, without the .repo
-  suffix.
-- Removal requires state: absent and name; for a DNF file override, also supply
-  file. Unlisted repositories remain unchanged, including when inputs return to
-  empty lists.
-- repos_presets accepts epel and crb on AlmaLinux; rpmfusion_free,
-  rpmfusion_nonfree and updates_testing on Fedora; obs_devel_tools and
-  obs_filesystems on openSUSE. Debian and Ubuntu support backports for the
-  detected release codename.
-- The backports preset manages debian-backports.sources with the main component,
-  or ubuntu-backports.sources with main, restricted, universe and multiverse. It
-  uses HTTPS and the installed distribution archive keyring; Ubuntu uses the
-  ports archive on non-x86 architectures.
-- Backports definitions in other source files remain unchanged, including
-  Ubuntu's supplied ubuntu.sources. Avoid defining the same source twice;
-  setting backports to false disables only the preset-managed file, not a
-  Backports suite in another file.
-- Omitted presets are unmanaged. Explicit true or false creates a complete
-  preset definition with that enabled flag, except crb and updates_testing,
-  which only toggle supplied sections. EPEL and RPM Fusion presets own their
-  named sections; use repos_toggles to preserve a previously customized
-  definition instead.
-- Select crb alongside epel for EPEL packages that depend on CRB, and select
-  rpmfusion_free alongside rpmfusion_nonfree for Nonfree packages that depend on
+- Previously downloaded `/etc/apt/keyrings/repos-<URL-hash>.gpg` files are
+  retained; they are not removed automatically.
+- AlmaLinux presets: epel. Fedora: rpmfusion_free and rpmfusion_nonfree.
+  openSUSE: obs_devel_tools and obs_filesystems. Debian and Ubuntu: backports.
+- APT names use lowercase letters, digits and hyphens. RPM file stems allow
+  letters, digits, dots, underscores and hyphens, without the .repo suffix.
+- Backports uses the detected release codename and installed archive keyring.
+  Debian enables main; Ubuntu enables main, restricted, universe and multiverse
+  and uses the ports archive on non-x86 architectures.
+- The backports preset targets debian-backports.sources or
+  ubuntu-backports.sources. For Backports already present in ubuntu.sources or
+  another file, declare that path and its suite directly to avoid a duplicate
+  source.
+- No unselected preset is managed. CRB uses `name: crb` and `file:
+  almalinux-crb`; Fedora testing uses `name: updates-testing` and `file:
+  fedora-updates-testing`.
+- Enable CRB explicitly alongside epel for packages depending on CRB, and select
+  rpmfusion_free alongside rpmfusion_nonfree for Nonfree packages depending on
   Free.
-- OBS presets point to devel:tools and filesystems builds for the detected
-  openSUSE release. Other OBS projects can be supplied through repos_zypper.
-- Presets and custom definitions cannot manage the same repository twice. A
-  section cannot appear in both complete definitions and repos_toggles in one
-  invocation.
-- APT and DNF metadata is refreshed by the consuming package task. Zypper
-  auto_import_keys refreshes only the repository being added or changed;
-  autorefresh controls later refreshes.
+- OBS presets select devel:tools and filesystems for the detected release. Other
+  projects can be declared directly in repos_zypper.
+- APT and DNF metadata is refreshed by consuming package tasks. Zypper
+  auto_import_keys refreshes the selected repository after changes; autorefresh
+  controls later refreshes.
 
 ## Supported Platforms
 
@@ -250,13 +249,13 @@ No service or handler is managed.
 
 ## Example Playbook
 
-### Define an APT repository
+### Declare a repository and a preset
 
-Use an existing public keyring scoped to one DEB822 source.
+Create the organization source and enable release-matched Backports.
 
 ```yaml
 - name: Configure APT repositories
-  hosts: debian
+  hosts: debian:ubuntu
   gather_facts: true
   roles:
     - role: jomrr.repos
@@ -266,25 +265,12 @@ Use an existing public keyring scoped to one DEB822 source.
           suites: [stable]
           components: [main]
           signed_by: /etc/apt/keyrings/organization.asc
+        - preset: backports
 ```
 
-### Select Debian or Ubuntu Backports
+### Declare Fedora repository settings
 
-Enable the Backports suite matching the managed host's release codename.
-
-```yaml
-- name: Configure Backports
-  hosts: debian:ubuntu
-  gather_facts: true
-  roles:
-    - role: jomrr.repos
-      repos_presets:
-        backports: true
-```
-
-### Toggle supplied Fedora repositories
-
-Preserve the supplied definitions, including their URLs, keys and comments.
+Use a private release mirror, disable testing and enable RPM Fusion.
 
 ```yaml
 - name: Configure Fedora repositories
@@ -292,33 +278,112 @@ Preserve the supplied definitions, including their URLs, keys and comments.
   gather_facts: true
   roles:
     - role: jomrr.repos
-      repos_toggles:
-        - path: /etc/yum.repos.d/fedora.repo
-          section: fedora
+      repos_dnf:
+        - name: fedora
+          file: fedora
           enabled: true
-      repos_presets:
-        updates_testing: false
-        rpmfusion_free: true
+          baseurl: [https://mirror.example.org/fedora/releases/$releasever/Everything/$basearch/os]
+        - name: updates-testing
+          file: fedora-updates-testing
+          enabled: false
+        - preset: rpmfusion_free
 ```
 
-### Select AlmaLinux presets
+### Declare AlmaLinux repository mirrors
 
-Define EPEL and enable the supplied CRB repository.
+Use private mirrors for EPEL and the supplied CRB repository.
 
 ```yaml
-- name: Configure Enterprise Linux repositories
+- name: Configure Enterprise Linux mirrors
   hosts: almalinux
   gather_facts: true
   roles:
     - role: jomrr.repos
-      repos_presets:
-        epel: true
-        crb: true
+      repos_dnf:
+        - preset: epel
+          baseurl: [https://mirror.example.org/epel/$releasever/Everything/$basearch]
+        - name: crb
+          file: almalinux-crb
+          enabled: true
+          baseurl: [https://mirror.example.org/almalinux/$releasever/CRB/$basearch/os]
 ```
 
-### Select an OBS repository
+### Select a section whose ID differs from its filename
 
-Enable devel:tools for the detected openSUSE release.
+Manage [extras] in almalinux-extras.repo while preserving its other supplied settings.
+
+```yaml
+- name: Configure AlmaLinux Extras
+  hosts: almalinux
+  gather_facts: true
+  roles:
+    - role: jomrr.repos
+      repos_dnf:
+        - name: extras
+          file: almalinux-extras
+          enabled: true
+```
+
+### Manage package-supplied RPM Fusion repositories
+
+For hosts with rpmfusion-free-release installed, declare desired
+overrides of its supplied repository sections.
+
+```yaml
+- name: Configure package-supplied RPM Fusion mirrors
+  hosts: fedora
+  gather_facts: true
+  roles:
+    - role: jomrr.repos
+      repos_dnf:
+        - name: rpmfusion-free
+          file: rpmfusion-free
+          enabled: true
+          baseurl: [https://mirror.example.org/rpmfusion/free/fedora/releases/$releasever/Everything/$basearch/os]
+        - name: rpmfusion-free-updates
+          file: rpmfusion-free-updates
+          enabled: true
+          baseurl: [https://mirror.example.org/rpmfusion/free/fedora/updates/$releasever/$basearch]
+```
+
+### Declare RPM Fusion mirrors
+
+Override release and updates URLs within one selected preset.
+
+```yaml
+- name: Configure RPM Fusion
+  hosts: fedora
+  gather_facts: true
+  roles:
+    - role: jomrr.repos
+      repos_dnf:
+        - preset: rpmfusion_free
+          repositories:
+            - name: rpmfusion-free
+              baseurl: [https://mirror.example.org/rpmfusion/free/fedora/releases/$releasever/Everything/$basearch/os]
+            - name: rpmfusion-free-updates
+              baseurl: [https://mirror.example.org/rpmfusion/free/fedora/updates/$releasever/$basearch]
+```
+
+### Declare the mirror for supplied Ubuntu Backports
+
+Preserve the other suites, fields and comments in ubuntu.sources.
+
+```yaml
+- name: Configure the Ubuntu Backports mirror
+  hosts: ubuntu
+  gather_facts: true
+  roles:
+    - role: jomrr.repos
+      repos_apt:
+        - path: /etc/apt/sources.list.d/ubuntu.sources
+          suites: ["{{ ansible_facts.distribution_release }}-backports"]
+          uris: [https://mirror.example.org/ubuntu]
+```
+
+### Declare openSUSE repositories
+
+Enable an OBS preset and disable a supplied repository by its alias.
 
 ```yaml
 - name: Configure openSUSE repositories
@@ -326,13 +391,15 @@ Enable devel:tools for the detected openSUSE release.
   gather_facts: true
   roles:
     - role: jomrr.repos
-      repos_presets:
-        obs_devel_tools: true
+      repos_zypper:
+        - preset: obs_devel_tools
+        - name: repo-oss
+          enabled: false
 ```
 
 ## References
 
-- [DEB822 module](https://docs.ansible.com/projects/ansible/latest/collections/ansible/builtin/deb822_repository_module.html)
+- [Repository modules and filter](https://github.com/jomrr/ansible-collection-general)
 - [Debian Backports](https://backports.debian.org/Instructions/)
 - [Ubuntu archive pockets](https://documentation.ubuntu.com/project/how-ubuntu-is-made/concepts/package-archive/)
 - [AlmaLinux repositories](https://wiki.almalinux.org/repos/Extras)

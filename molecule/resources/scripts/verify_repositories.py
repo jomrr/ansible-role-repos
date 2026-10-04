@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check role behavior against complete, supplied repository configurations."""
+"""Check role dispatch, presets, overrides and empty inputs against host state."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import argparse
 import configparser
 import json
 import platform
-import re
 from pathlib import Path
 
 SNAPSHOT = Path("/tmp/repos-original.json")
@@ -58,21 +57,11 @@ def repository(path: Path, section: str) -> configparser.SectionProxy:
     return parser[section]
 
 
-def toggle_only(original: str, current: str, section: str) -> bool:
-    """Allow one enabled flag to change while retaining every other byte."""
-    block = re.compile(r"(?ms)(^\[" + re.escape(section) + r"\]\n)(.*?)(?=^\[|\Z)")
-
-    def normalize(match: re.Match[str]) -> str:
-        return match[1] + re.sub(r"(?m)^enabled\s*=.*$", "enabled=<selected>", match[2])
-
-    return block.sub(normalize, original) == block.sub(normalize, current)
-
-
 def selected_toggles(
     directory: Path, distribution: str, initial: bool
 ) -> dict[Path, tuple[str, bool]]:
     """Describe the exercised public switches independently of role variables."""
-    toggles = {directory / "molecule-supplied.repo": ("molecule-supplied", initial)}
+    toggles = {directory / "molecule-settings.repo": ("molecule-supplied", initial)}
     if distribution == "AlmaLinux":
         toggles[directory / "almalinux-crb.repo"] = ("crb", False)
     elif distribution == "Fedora":
@@ -123,13 +112,13 @@ def verify_backports(directory: Path, distribution: str, phase: str) -> Path:
         fields
     )
     if distribution == "Debian":
-        assert fields["URIs"] == "https://deb.debian.org/debian", fields
+        assert fields["URIs"] == "https://deb.debian.org/debian/", fields
         assert fields["Components"] == "main", fields
     else:
         archive = (
-            "https://archive.ubuntu.com/ubuntu"
+            "https://archive.ubuntu.com/ubuntu/"
             if platform.machine() in {"x86_64", "i386", "i686"}
-            else "https://ports.ubuntu.com/ubuntu-ports"
+            else "https://ports.ubuntu.com/ubuntu-ports/"
         )
         assert fields["URIs"] == archive, fields
         assert set(fields["Components"].split()) == {
@@ -153,7 +142,24 @@ def verify_presets(
         data = repository(path, name)
         assert data.getboolean("enabled") == (phase == "initial"), dict(data)
         assert data.getboolean("gpgcheck"), dict(data)
-        if name.startswith("obs-"):
+        if name in {
+            "epel",
+            "rpmfusion-free",
+            "rpmfusion-free-updates",
+            "obs-devel-tools",
+        }:
+            variant = {
+                "rpmfusion-free-updates": "v2",
+                "obs-devel-tools": "preset-v1",
+            }.get(name, "v1")
+            expected = f"file:///tmp/repos-fixture-{variant}"
+            if name.startswith("obs-"):
+                expected = expected.replace("file:///", "file:/")
+            assert data["baseurl"].rstrip("/") == expected, dict(data)
+            assert "metalink" not in data and "mirrorlist" not in data, dict(data)
+            if not name.startswith("obs-"):
+                assert data["gpgkey"].startswith("https://"), dict(data)
+        elif name.startswith("obs-"):
             assert data["baseurl"].startswith(
                 "https://download.opensuse.org/repositories/"
             ), dict(data)
@@ -166,6 +172,32 @@ def verify_presets(
             assert data["gpgkey"].startswith("https://"), dict(data)
         paths.add(path)
     return paths
+
+
+def verify_apt_override(directory: Path, phase: str) -> Path:
+    """Check that an explicit path, suite and mirror reach the APT module."""
+    path = directory / "sources.list.d" / "molecule-supplied.sources"
+    fields = deb822_fields(path)
+    variant = "v1" if phase == "initial" else "v2"
+    assert fields["URIs"] == f"https://mirror.example.org/{variant}", fields
+    assert fields["Suites"] == "fixture-backports", fields
+    return path
+
+
+def verify_supplied(path: Path, section: str, phase: str) -> None:
+    """Check that RPM mirror overrides reach the selected section and filename."""
+    mirror = section in {"molecule-supplied", "crb", "updates-testing"}
+    if mirror:
+        variant = (
+            "v2" if section == "molecule-supplied" and phase != "initial" else "v1"
+        )
+        data = repository(path, section)
+        prefix = "mirror-" if section == "molecule-supplied" else ""
+        expected = f"file:///tmp/repos-fixture-{prefix}{variant}"
+        if path.parent == DIRECTORIES["zypper"]:
+            expected = expected.replace("file:///", "file:/")
+        assert data["baseurl"] == expected, dict(data)
+        assert "metalink" not in data and "mirrorlist" not in data, dict(data)
 
 
 def verify(backend: str, distribution: str, phase: str, version: str) -> None:
@@ -182,6 +214,8 @@ def verify(backend: str, distribution: str, phase: str, version: str) -> None:
     managed = {verify_definition(directory, backend, phase)} | verify_presets(
         directory, distribution, phase, version
     )
+    if backend == "apt":
+        managed.add(verify_apt_override(directory, phase))
     toggles = (
         {}
         if backend == "apt"
@@ -189,7 +223,7 @@ def verify(backend: str, distribution: str, phase: str, version: str) -> None:
     )
     for path, (section, enabled) in toggles.items():
         assert repository(path, section).getboolean("enabled") == enabled, str(path)
-        assert toggle_only(original[str(path)], current[str(path)], section), str(path)
+        verify_supplied(path, section, phase)
     for filename, content in original.items():
         if Path(filename) not in toggles and Path(filename) not in managed:
             assert current.get(filename) == content, (

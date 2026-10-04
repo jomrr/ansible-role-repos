@@ -2,52 +2,58 @@
 # role: repos
 # file: defaults/main.yml
 
-# Desired state of explicitly defined repositories unless overridden per item.
+# Desired presence of selected repositories unless overridden per entry.
 # Choices: present, absent
 repos_state: present
 
-# Enable explicitly defined repositories unless overridden per item.
+# Enable new repositories and selected presets unless overridden per entry.
 repos_enabled: true
 
-# Verify RPM package signatures unless overridden per repository.
+# Verify RPM signatures for new repositories unless overridden per entry.
 repos_gpgcheck: true
 
-# DEB822 repository definitions for Debian and Ubuntu.
+# Desired APT sources and presets; omitted settings of supplied sources are preserved.
 repos_apt: []
 # repos_apt:
-#   - name: organization
-#     uris: [https://packages.example.org/debian]
-#     suites: [stable]
-#     components: [main]
-#     signed_by: /etc/apt/keyrings/organization.asc
+#   - preset: backports
+#     enabled: true
+#   - path: /etc/apt/sources.list.d/ubuntu.sources
+#     suites: ["{{ ansible_facts.distribution_release }}"]
+#     uris: [https://mirror.example.org/ubuntu]
 
-# Complete repository definitions for DNF and DNF5; listed sections are role-owned.
+# Desired DNF and DNF5 repositories; name is the repo ID, file the stem without .repo.
 repos_dnf: []
+# AlmaLinux:
 # repos_dnf:
-#   - name: organization
-#     description: Organization packages
-#     baseurl: [https://packages.example.org/rpm/$releasever/$basearch]
-#     gpgkey: [https://packages.example.org/keys/rpm.asc]
+#   - preset: epel
+#     baseurl: [https://mirror.example.org/epel/$releasever/Everything/$basearch]
+#   - name: extras
+#     file: almalinux-extras
+#     enabled: true
+#     baseurl: [https://mirror.example.org/almalinux/$releasever/extras/$basearch/os]
 
-# Complete repository definitions for Zypper; listed repositories are role-owned.
+# Fedora:
+# repos_dnf:
+#   - name: fedora
+#     file: fedora
+#     enabled: true
+#     baseurl: [https://mirror.example.org/fedora/$releasever/$basearch]
+
+# RPM Fusion sections supplied by an installed rpmfusion-free-release package.
+# repos_dnf:
+#   - name: rpmfusion-free
+#     file: rpmfusion-free
+#     enabled: true
+#     baseurl: [https://mirror.example.org/rpmfusion/free/fedora/releases/$releasever/Everything/$basearch/os]
+#   - name: rpmfusion-free-updates
+#     file: rpmfusion-free-updates
+#     enabled: true
+#     baseurl: [https://mirror.example.org/rpmfusion/free/fedora/updates/$releasever/$basearch]
+
+# Desired Zypper repositories; name is the alias, file defaults to name without .repo.
 repos_zypper: []
 # repos_zypper:
+#   - preset: obs_devel_tools
 #   - name: organization
 #     repo: https://packages.example.org/opensuse
 #     auto_import_keys: true
-
-# Enabled flags to change in supplied RPM .repo files, preserving other settings.
-repos_toggles: []
-# repos_toggles:
-#   - path: /etc/yum.repos.d/fedora.repo
-#     section: fedora
-#     enabled: true
-
-# Distribution-specific switches; omitted presets leave their repositories unmanaged.
-repos_presets: {}
-# Debian and Ubuntu: backports.
-# AlmaLinux: epel, crb; Fedora: rpmfusion_free, rpmfusion_nonfree, updates_testing.
-# openSUSE Leap and Tumbleweed: obs_devel_tools, obs_filesystems.
-# repos_presets:
-#   epel: true
-#   crb: true

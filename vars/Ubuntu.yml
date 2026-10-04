@@ -4,13 +4,11 @@
 
 __repos_presets:
   backports:
-    repositories:
-      - name: ubuntu-backports
-        uris:
-          - >-
-            {{ 'https://archive.ubuntu.com/ubuntu' if ansible_facts.architecture in ['x86_64', 'i386', 'i686']
-               else 'https://ports.ubuntu.com/ubuntu-ports' }}
-        suites: ["{{ ansible_facts.distribution_release }}-backports"]
-        components: [main, restricted, universe, multiverse]
-        signed_by: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-        enabled: "{{ repos_presets.backports | default(false) }}"
+    - name: ubuntu-backports
+      uris:
+        - >-
+          {{ 'https://archive.ubuntu.com/ubuntu' if ansible_facts.architecture in ['x86_64', 'i386', 'i686']
+             else 'https://ports.ubuntu.com/ubuntu-ports' }}
+      suites: ["{{ ansible_facts.distribution_release }}-backports"]
+      components: [main, restricted, universe, multiverse]
+      signed_by: /usr/share/keyrings/ubuntu-archive-keyring.gpg

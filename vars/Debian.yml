@@ -4,10 +4,8 @@
 
 __repos_presets:
   backports:
-    repositories:
-      - name: debian-backports
-        uris: [https://deb.debian.org/debian]
-        suites: ["{{ ansible_facts.distribution_release }}-backports"]
-        components: [main]
-        signed_by: /usr/share/keyrings/debian-archive-keyring.gpg
-        enabled: "{{ repos_presets.backports | default(false) }}"
+    - name: debian-backports
+      uris: [https://deb.debian.org/debian]
+      suites: ["{{ ansible_facts.distribution_release }}-backports"]
+      components: [main]
+      signed_by: /usr/share/keyrings/debian-archive-keyring.gpg

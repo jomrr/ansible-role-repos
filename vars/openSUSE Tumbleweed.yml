@@ -4,14 +4,10 @@
 
 __repos_presets:
   obs_devel_tools:
-    repositories:
-      - name: obs-devel-tools
-        repo: https://download.opensuse.org/repositories/devel:/tools/openSUSE_Tumbleweed/
-        enabled: "{{ repos_presets.obs_devel_tools | default(false) }}"
-        auto_import_keys: true
+    - name: obs-devel-tools
+      repo: https://download.opensuse.org/repositories/devel:/tools/openSUSE_Tumbleweed/
+      auto_import_keys: true
   obs_filesystems:
-    repositories:
-      - name: obs-filesystems
-        repo: https://download.opensuse.org/repositories/filesystems/openSUSE_Tumbleweed/
-        enabled: "{{ repos_presets.obs_filesystems | default(false) }}"
-        auto_import_keys: true
+    - name: obs-filesystems
+      repo: https://download.opensuse.org/repositories/filesystems/openSUSE_Tumbleweed/
+      auto_import_keys: true

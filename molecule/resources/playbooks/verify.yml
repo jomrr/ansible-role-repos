@@ -23,7 +23,7 @@
       changed_when: false
       when: ansible_facts.pkg_mgr == 'apt'
 
-    - name: REPOS | Verify definitions, selected presets and preserved supplied settings
+    - name: REPOS | Verify dispatch, presets and repository overrides
       ansible.builtin.script:
         cmd: >-
           ../scripts/verify_repositories.py initial {{ ansible_facts.pkg_mgr }} {{ ansible_facts.distribution | quote }}

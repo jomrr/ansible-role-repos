@@ -6,16 +6,6 @@
   hosts: all
   gather_facts: true
   tasks:
-    - name: REPOS | Install APT test dependencies
-      become: true
-      become_user: root
-      ansible.builtin.apt:
-        name: python3-debian
-        state: present
-        update_cache: true
-        cache_valid_time: 3600
-      when: ansible_facts.pkg_mgr == 'apt'
-
     - name: REPOS | Install the RPM metadata fixture tool
       become: true
       become_user: root
@@ -29,7 +19,7 @@
         path: "/tmp/repos-fixture-{{ __repos_fixture }}"
         state: directory
         mode: '0755'
-      loop: [v1, v2]
+      loop: [v1, v2, mirror-v1, mirror-v2, preset-v1]
       loop_control:
         loop_var: __repos_fixture
 
@@ -37,33 +27,38 @@
       ansible.builtin.command:
         argv: [createrepo_c, "/tmp/repos-fixture-{{ __repos_fixture }}"]
         creates: "/tmp/repos-fixture-{{ __repos_fixture }}/repodata/repomd.xml"
-      loop: [v1, v2]
+      loop: [v1, v2, mirror-v1, mirror-v2, preset-v1]
       loop_control:
         loop_var: __repos_fixture
       when: ansible_facts.pkg_mgr == 'zypper'
 
-    - name: REPOS | Prepare supplied sections with unrelated settings
+    - name: REPOS | Prepare a supplied repository with a different filename
       become: true
       become_user: root
       ansible.builtin.copy:
-        dest: "{{ __repos_test_directory }}/molecule-supplied.repo"
+        dest: "{{ __repos_test_directory }}/molecule-settings.repo"
         mode: '0644'
         content: |
-          # Supplied configuration must survive toggles.
           [molecule-supplied]
           name=Supplied repository
           baseurl=https://supplied.invalid/repository
           enabled=0
           gpgcheck=1
-          priority=83
-          # This comment and the sibling section must remain unchanged.
-
-          [molecule-unlisted]
-          name=Unlisted repository
-          baseurl=https://unlisted.invalid/repository
-          enabled=0
-          gpgcheck=1
       when: ansible_facts.pkg_mgr != 'apt'
+
+    - name: REPOS | Prepare an APT source selected by its path
+      become: true
+      become_user: root
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/molecule-supplied.sources
+        mode: '0644'
+        content: |
+          Types: deb
+          URIs: https://supplied.invalid/archive
+          Suites: fixture-backports
+          Components: main
+          Enabled: no
+      when: ansible_facts.pkg_mgr == 'apt'
 
     - name: REPOS | Snapshot supplied configuration
       ansible.builtin.script:
@@ -79,8 +74,6 @@
         repos_apt: []
         repos_dnf: []
         repos_zypper: []
-        repos_toggles: []
-        repos_presets: {}
 
     - name: REPOS | Verify empty inputs preserve all repositories
       ansible.builtin.script:

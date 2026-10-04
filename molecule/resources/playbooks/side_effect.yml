@@ -6,27 +6,28 @@
   hosts: all
   gather_facts: true
   tasks:
+    - name: REPOS | Predict supplied mirror updates without changing files
+      ansible.builtin.include_role:
+        name: "{{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+        apply:
+          check_mode: true
+      vars:
+        __repos_test_mirror_version: v2
+
+    - name: REPOS | Verify check mode preserved the converged state
+      ansible.builtin.script:
+        cmd: >-
+          ../scripts/verify_repositories.py initial {{ ansible_facts.pkg_mgr }} {{ ansible_facts.distribution | quote }}
+          {{ ansible_facts.distribution_version | quote }}
+        executable: python3
+      changed_when: false
+
     - name: REPOS | Update a definition and disable selected repositories
       ansible.builtin.include_role:
         name: "{{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY') }}"
       vars:
-        repos_apt:
-          - name: molecule-repository
-            uris: [file:///tmp/repos-fixture-v2]
-            suites: [./]
-            enabled: false
-        repos_dnf:
-          - name: molecule-repository
-            baseurl: [file:///tmp/repos-fixture-v2]
-            enabled: false
-        repos_zypper:
-          - name: molecule-repository
-            repo: file:///tmp/repos-fixture-v2
-            enabled: false
-        repos_toggles: "{{ __repos_test_toggles | map('combine', {'enabled': false}) | list }}"
-        repos_presets: >-
-          {{ __repos_test_presets[ansible_facts.distribution] | dict2items
-             | map('combine', {'value': false}) | items2dict }}
+        __repos_test_mirror_version: v2
+        __repos_test_enabled: false
 
     - name: REPOS | Verify changed definitions and disabled repositories
       ansible.builtin.script:
@@ -47,8 +48,6 @@
           - name: molecule-repository
         repos_zypper:
           - name: molecule-repository
-        repos_toggles: []
-        repos_presets: {}
 
     - name: REPOS | Verify removal preserves unlisted and preset repositories
       ansible.builtin.script:

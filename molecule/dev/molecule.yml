@@ -32,52 +32,121 @@ provisioner:
           dnf5: "/etc/yum.repos.d"
           zypper: "/etc/zypp/repos.d"
         __repos_test_directory: "{{ __repos_test_directories[ansible_facts.pkg_mgr] }}"
-        __repos_test_presets:
+        repos_apt: "{{ __repos_test_repositories[ansible_facts.distribution] if ansible_facts.pkg_mgr == 'apt' else [] }}"
+        repos_dnf: "{{ __repos_test_repositories[ansible_facts.distribution] if ansible_facts.pkg_mgr in ['dnf', 'dnf5'] else\
+          \ [] }}"
+        repos_zypper: "{{ __repos_test_repositories[ansible_facts.distribution] if ansible_facts.pkg_mgr == 'zypper' else\
+          \ [] }}"
+        __repos_test_enabled: true
+        __repos_test_mirror_version: "v1"
+        __repos_test_repositories:
           AlmaLinux:
-            epel: true
-            crb: false
+            - name: "molecule-repository"
+              baseurl:
+                - "file:///tmp/repos-fixture-{{ __repos_test_mirror_version }}"
+              enabled: false
+            - preset: "epel"
+              enabled: "{{ __repos_test_enabled }}"
+              baseurl:
+                - "file:///tmp/repos-fixture-v1"
+            - name: "crb"
+              file: "almalinux-crb"
+              enabled: false
+              baseurl:
+                - "file:///tmp/repos-fixture-v1"
+            - name: "molecule-supplied"
+              file: "molecule-settings"
+              enabled: "{{ __repos_test_enabled }}"
+              baseurl:
+                - "file:///tmp/repos-fixture-mirror-{{ __repos_test_mirror_version }}"
           Debian:
-            backports: true
+            - name: "molecule-repository"
+              uris:
+                - "file:///tmp/repos-fixture-{{ __repos_test_mirror_version }}"
+              suites:
+                - "./"
+              enabled: false
+            - preset: "backports"
+              enabled: "{{ __repos_test_enabled }}"
+              uris:
+                - "https://deb.debian.org/debian/"
+            - path: "/etc/apt/sources.list.d/molecule-supplied.sources"
+              suites:
+                - "fixture-backports"
+              uris:
+                - "https://mirror.example.org/{{ __repos_test_mirror_version }}"
           Ubuntu:
-            backports: true
+            - name: "molecule-repository"
+              uris:
+                - "file:///tmp/repos-fixture-{{ __repos_test_mirror_version }}"
+              suites:
+                - "./"
+              enabled: false
+            - preset: "backports"
+              enabled: "{{ __repos_test_enabled }}"
+              uris:
+                - "https://archive.ubuntu.com/ubuntu/"
+            - path: "/etc/apt/sources.list.d/molecule-supplied.sources"
+              suites:
+                - "fixture-backports"
+              uris:
+                - "https://mirror.example.org/{{ __repos_test_mirror_version }}"
           Fedora:
-            rpmfusion_free: true
-            rpmfusion_nonfree: true
-            updates_testing: true
+            - name: "molecule-repository"
+              baseurl:
+                - "file:///tmp/repos-fixture-{{ __repos_test_mirror_version }}"
+              enabled: false
+            - preset: "rpmfusion_free"
+              enabled: "{{ __repos_test_enabled }}"
+              repositories:
+                - name: "rpmfusion-free"
+                  baseurl:
+                    - "file:///tmp/repos-fixture-v1"
+                - name: "rpmfusion-free-updates"
+                  baseurl:
+                    - "file:///tmp/repos-fixture-v2"
+            - preset: "rpmfusion_nonfree"
+              enabled: "{{ __repos_test_enabled }}"
+            - name: "updates-testing"
+              file: "fedora-updates-testing"
+              enabled: "{{ __repos_test_enabled }}"
+              baseurl:
+                - "file:///tmp/repos-fixture-v1"
+            - name: "molecule-supplied"
+              file: "molecule-settings"
+              enabled: "{{ __repos_test_enabled }}"
+              baseurl:
+                - "file:///tmp/repos-fixture-mirror-{{ __repos_test_mirror_version }}"
+            - name: "fedora"
+              enabled: "{{ __repos_test_enabled }}"
           openSUSE Leap:
-            obs_devel_tools: true
-            obs_filesystems: true
+            - name: "molecule-repository"
+              repo: "file:///tmp/repos-fixture-{{ __repos_test_mirror_version }}"
+              enabled: false
+            - preset: "obs_devel_tools"
+              enabled: "{{ __repos_test_enabled }}"
+              repo: "file:///tmp/repos-fixture-preset-v1"
+              auto_import_keys: false
+            - preset: "obs_filesystems"
+              enabled: "{{ __repos_test_enabled }}"
+            - name: "molecule-supplied"
+              file: "molecule-settings"
+              enabled: "{{ __repos_test_enabled }}"
+              repo: "file:///tmp/repos-fixture-mirror-{{ __repos_test_mirror_version }}"
           openSUSE Tumbleweed:
-            obs_devel_tools: true
-            obs_filesystems: true
-        __repos_test_rpm_toggles:
-          - path: "{{ __repos_test_directory }}/molecule-supplied.repo"
-            section: "molecule-supplied"
-            enabled: true
-        __repos_test_fedora_toggles:
-          - path: "/etc/yum.repos.d/fedora.repo"
-            section: "fedora"
-            enabled: true
-        __repos_test_toggles: "{{ (__repos_test_rpm_toggles if ansible_facts.pkg_mgr != 'apt' else []) + (__repos_test_fedora_toggles\
-          \ if ansible_facts.distribution == 'Fedora' else []) }}"
-        repos_apt:
-          - name: "molecule-repository"
-            uris:
-              - "file:///tmp/repos-fixture-v1"
-            suites:
-              - "./"
-            enabled: false
-        repos_dnf:
-          - name: "molecule-repository"
-            baseurl:
-              - "file:///tmp/repos-fixture-v1"
-            enabled: false
-        repos_zypper:
-          - name: "molecule-repository"
-            repo: "file:///tmp/repos-fixture-v1"
-            enabled: false
-        repos_toggles: "{{ __repos_test_toggles }}"
-        repos_presets: "{{ __repos_test_presets[ansible_facts.distribution] }}"
+            - name: "molecule-repository"
+              repo: "file:///tmp/repos-fixture-{{ __repos_test_mirror_version }}"
+              enabled: false
+            - preset: "obs_devel_tools"
+              enabled: "{{ __repos_test_enabled }}"
+              repo: "file:///tmp/repos-fixture-preset-v1"
+              auto_import_keys: false
+            - preset: "obs_filesystems"
+              enabled: "{{ __repos_test_enabled }}"
+            - name: "molecule-supplied"
+              file: "molecule-settings"
+              enabled: "{{ __repos_test_enabled }}"
+              repo: "file:///tmp/repos-fixture-mirror-{{ __repos_test_mirror_version }}"
   log: true
   playbooks:
     prepare: "../resources/playbooks/prepare.yml"

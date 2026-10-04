@@ -2,95 +2,15 @@
 # role: repos
 # file: tasks/assert.yml
 
-- name: REPOS | Validate backend and preset selection
+- name: REPOS | Validate the detected backend
   ansible.builtin.assert:
     that:
       - ansible_facts.pkg_mgr in __repos_backends
-      - repos_presets.keys() | difference(__repos_presets.keys()) | length == 0
-      - ansible_facts.pkg_mgr != 'apt' or __repos_toggles | length == 0
-    fail_msg: Select presets supported by this distribution; INI repository toggles require DNF or Zypper.
+    fail_msg: The detected package manager must be APT, DNF, DNF5 or Zypper.
     quiet: true
 
-- name: REPOS | Validate repository names
+- name: REPOS | Resolve repository identities and reject conflicting entries
   ansible.builtin.assert:
     that:
-      - __repos_definitions | map(attribute='name') | unique(case_sensitive=true) | length == __repos_definitions | length
-      - >-
-        __repos_definitions | map(attribute='name') | select('match', '^[a-z0-9][a-z0-9-]*$') | list | length
-        == __repos_definitions | length
-    fail_msg: Repository names must be unique lowercase filename stems using letters, digits and hyphens.
+      - __repos_repositories is sequence
     quiet: true
-
-- name: REPOS | Validate DNF filenames
-  ansible.builtin.assert:
-    that:
-      - __repos_repository.file | default(__repos_repository.name) is match('^[a-z0-9][a-z0-9_.-]*$')
-    fail_msg: DNF file values must be filename stems without whitespace or path separators.
-    quiet: true
-  loop: "{{ __repos_definitions }}"
-  loop_control:
-    loop_var: __repos_repository
-    label: "{{ __repos_repository.name }}"
-  when: ansible_facts.pkg_mgr in ['dnf', 'dnf5']
-
-- name: REPOS | Keep definitions and supplied repository toggles separate
-  ansible.builtin.assert:
-    that:
-      - __repos_toggle.section not in (__repos_definitions | map(attribute='name') | list)
-    fail_msg: A repository cannot be fully defined and toggled in the same role invocation.
-    quiet: true
-  loop: "{{ __repos_toggles }}"
-  loop_control:
-    loop_var: __repos_toggle
-    label: "{{ __repos_toggle.path }} [{{ __repos_toggle.section }}]"
-
-- name: REPOS | Validate complete APT definitions
-  ansible.builtin.assert:
-    that:
-      - __repos_repository.uris | default([]) | length > 0
-      - __repos_repository.suites | default([]) | length > 0
-      - >-
-        __repos_repository.components | default([]) | length > 0
-        or __repos_repository.suites | reject('search', '/$') | list | length == 0
-    fail_msg: Present APT definitions require uris and suites, plus components unless all suites are exact paths ending in a slash.
-    quiet: true
-  loop: "{{ __repos_definitions }}"
-  loop_control:
-    loop_var: __repos_repository
-    label: "{{ __repos_repository.name }}"
-  when:
-    - ansible_facts.pkg_mgr == 'apt'
-    - __repos_repository.state | default(repos_state) == 'present'
-
-- name: REPOS | Reject conflicting toggle entries
-  ansible.builtin.assert:
-    that:
-      - __repos_toggles | map(attribute='section') | unique(case_sensitive=true) | length == __repos_toggles | length
-    fail_msg: Supply each repository section only once across custom toggles and presets.
-    quiet: true
-
-- name: REPOS | Read supplied repository sections
-  become: true
-  become_user: root
-  ansible.builtin.slurp:
-    src: "{{ __repos_toggle.path }}"
-  loop: "{{ __repos_toggles }}"
-  loop_control:
-    loop_var: __repos_toggle
-    label: "{{ __repos_toggle.path }} [{{ __repos_toggle.section }}]"
-  register: __repos_supplied_files
-  no_log: true
-
-- name: REPOS | Require the selected supplied section
-  ansible.builtin.assert:
-    that:
-      - >-
-        (__repos_supplied_files.results[__repos_toggle_index].content | b64decode)
-        is search('(?m)^\\s*\\[' ~ (__repos_toggle.section | regex_escape) ~ '\\]\\s*(?:[#;].*)?$')
-    fail_msg: The selected repository section must already exist; toggles never create a new section.
-    quiet: true
-  loop: "{{ __repos_toggles }}"
-  loop_control:
-    loop_var: __repos_toggle
-    index_var: __repos_toggle_index
-    label: "{{ __repos_toggle.path }} [{{ __repos_toggle.section }}]"
